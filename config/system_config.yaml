@@ -1,0 +1,72 @@
+# AI Player System Configuration
+# Main configuration file for all system components
+
+system:
+  project_name: "ai_player"
+  version: "1.0.0"
+  debug_mode: true
+
+# Perception Module Configuration
+perception:
+  confidence_threshold: 0.8
+  template_library_path: "data/templates"
+  screenshot_archive_path: "data/screenshots"
+  ocr_confidence_threshold: 0.7
+  recalibration_threshold: 0.8
+
+# State Representation Configuration
+state:
+  history_frames: 4
+  state_size: 26  # Base state vector size
+  normalize_coordinates: true
+  max_mineral_value: 10000
+  max_power_value: 1000
+
+# RL Model Configuration
+model:
+  algorithm: "PPO"
+  training_mode: true
+  state_size: 104  # 26 * 4 frames
+  action_size: 3   # No-op, Click, Key press
+  
+  # PPO Hyperparameters
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.01
+  vf_coef: 0.5
+  verbose: 1
+
+# Action Module Configuration
+action:
+  smooth_mouse_movement: true
+  movement_steps: 10
+  click_delay: 0.01
+  key_press_delay: 0.01
+  coordinate_precision: 2  # decimal places
+
+# Game-Specific Configuration
+game:
+  name: "Dune Legacy"
+  app_path: "/Applications/Dune Legacy.app"
+  startup_delay: 3.0
+  window_detection_timeout: 10.0
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  log_file: "data/logs/ai_player.log"
+  tensorboard_dir: "data/logs/tensorboard"
+  console_output: true
+
+# Data Management Configuration
+data:
+  template_library_version: "1.0"
+  auto_save_screenshots: true
+  screenshot_compression: "lz4"
+  max_screenshot_history: 1000
+  state_log_buffer_size: 10000

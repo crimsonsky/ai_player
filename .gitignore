@@ -1,0 +1,154 @@
+# AI Player Project .gitignore - DVC Compliant
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# DVC - Data files tracked by DVC, not Git
+/data/templates/*.png
+/data/templates/*.jpg
+/data/templates/*.jpeg
+/data/training/
+/data/models/
+/data/screenshots/
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+.cache/
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+*.out
+
+# Game-related temporary files
+screenshots/
+temp_screenshots/
+
+# Model artifacts
+*.pt
+*.pth
+*.ckpt
+checkpoints/
+
+# Testing artifacts
+.coverage
+htmlcov/
+.tox/
+
+# Local configuration
+config/local_*.json
+config/dev_*.json
+*.local.json
+
+# Backup files
+*.bak
+*.backup
+
+# Audio feedback temporary files
+*.wav
+*.mp3
+audio_temp/
+
+# System files
+Thumbs.db
+ehthumbs.db
+*.temp
+temp/
+
+# Model checkpoints
+checkpoints/
+runs/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+
+# PyTorch
+*.pth
+*.pt
+
+# TensorBoard
+data/logs/tensorboard/
+
+# Weights & Biases
+wandb/
+
+# Test outputs
+test_outputs/
+*.test
+
+# macOS specific
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Game-specific temporary files
+game_state_*.json
+screenshot_*.png
+
+# Keep template library structure but ignore actual templates initially
+data/templates/*.png
+data/templates/*.jpg
+!data/templates/.gitkeep

@@ -1,0 +1,111 @@
+# **AI PLAYER SYSTEM DESIGN SPECIFICATION (AIP-SDS-V1.0)**
+
+**Based on Project Plan V1.1 | Target Agent: Dune Legacy | Phase: Phase 1 (M1-M4)**
+
+## **1. ARCHITECTURAL OVERVIEW (CLOSED-LOOP RL)**
+
+The AI Player operates as an encapsulated Reinforcement Learning environment (Gym Wrapper). The core loop involves four interconnected modules executing sequentially at every time step ($\\Delta t$):
+
+1. **PERCEPTION:** Captures raw screen data.  
+2. **STATE REPRESENTATION:** Converts raw data into the State Vector ($S\_t$).  
+3. **DECISION:** $S\_t \\rightarrow$ Action ($A\_t$) via the PPO model.  
+4. **ACTION:** Executes $A\_t$ via input emulation.  
+5. **LEARNING:** Receives Reward ($R\_t$) to update Decision Module weights.  
+   [Image of Reinforcement Learning loop diagram](https://encrypted-tbn3.gstatic.com/licensed-image?q=tbn:ANd9GcThxj5gl5Mm4mq87cWsD8x6JJBnjlrp8YFXi2W1M20TUDMj5YEuP34b7fL8y0mRLpHCh1Yo87rYCiJyT--uKheWjFKFcacGUFcdNCIdhoo-Vut5Lco)
+
+## **2\. MODULE 1: PERCEPTION (RAW DATA $\\rightarrow$ FEATURES)**
+
+**Goal:** Robustly and independently identify the location and value of critical game elements, regardless of resolution or window size (Req 2.6).
+
+| Sub-Module | Technology | Function | Output Format |
+| :---- | :---- | :---- | :---- |
+| **A. Screen Capture** | pyobjc | High-speed, non-blocking capture of the entire active screen. | Raw $\\text{PIL}$ Image (RGB) |
+| **B. Template Library** | OpenCV | Database of pre-labeled UI templates (buttons, resources, units). **Version Controlled (DVC)**. | JSON array of $\\text{Template ID}$, $\\text{Image Path}$, $\\text{Confidence Threshold}$. |
+| **C. Element Location** | OpenCV | Template Matching / Feature Detection (e.g., SIFT/ORB) to find matches from 1B in 1A. **Coordinates MUST be normalized (0 to 1\)**. | List of $\\text{\\{ID, Normalized (x, y), Confidence Score\\}}$. |
+| **D. Text Extraction** | ocrmac | Target specific Regions of Interest (ROI) identified by 1C (e.g., resource counters). | Dictionary of $\\text{\\{Label (e.g., "Spice"), Numeric Value\\}}$. |
+| **E. Recalibration** | **Custom Routine** | **CRITICAL MITIGATION (R1):** Triggered if $\\text{Confidence Score} \< 0.8$. | Recaptures full screen, re-runs 1C/1D, updates dynamic ROI coordinates for M4. |
+
+## **3\. MODULE 2: STATE REPRESENTATION (FEATURES $\\rightarrow$ $S\_t$)**
+
+**Goal:** Convert sparse, high-dimensional visual features into a compact, fixed-size numerical vector ($S\_t$) suitable for the RL algorithm.
+
+### **3.1. STATE VECTOR STRUCTURE ($S\_t$)**
+
+$S\_t$ must be a flat, 1-dimensional $\\text{NumPy}$ array. The structure is dynamic but will include the following core sections for Phase 1 (M4):
+
+1. **Game Phase Indicator (M3/M4):**  
+   * is\_in\_main\_menu: $\\{0, 1\\}$  
+   * is\_in\_game: $\\{0, 1\\}$  
+   * is\_game\_over: $\\{0, 1\\}$  
+2. **Resources/Stats (M4):**  
+   * current\_minerals: Integer (from OCR).  
+   * power\_consumption: Integer (from OCR).  
+3. **Perception Confidence:**  
+   * avg\_confidence\_score: Float (Average of all elements in 1C).
+
+### **3.2. HISTORY STACKING**
+
+The final $S\_t$ passed to the Decision Module will be a stack of the last $N=\\text{HISTORY\\\_FRAMES}$ State Vectors, where $\\text{HISTORY\\\_FRAMES}$ is a hyperparameter (default $N=4$). This captures temporal dynamics (e.g., resource change rate).
+
+## **4\. MODULE 3: DECISION (RL MODEL & TRAINING)**
+
+**Goal:** Learn an optimal policy ($\\pi(a|s)$) to maximize cumulative reward using the PPO algorithm.
+
+### **4.1. RL ALGORITHM**
+
+* **Model:** Proximal Policy Optimization (PPO) (Req 2.4).  
+* **Implementation:** Stable Baselines3 ($\\text{SB3}$) with **PyTorch** backend.  
+* **Hardware Acceleration:** Must utilize $\\text{PyTorch}$'s **Metal Performance Shaders (MPS)** backend for AMD GPU acceleration (Technical Stack).
+
+### **4.2. ACTION SPACE (Phase 1\)**
+
+The action space $A$ must be **Discrete** (M3/M4) for simplicity in the initial phase.
+
+| Action ID | Action Type | Description |
+| :---- | :---- | :---- |
+| $\\text{A}\_0$ | No-Op | Do nothing/Wait. |
+| $\\text{A}\_1$ | **Click Template** | Parameterized click action targeting a specific $\\text{Template ID}$ identified in Module 2\. |
+| $\\text{A}\_2$ | Key Press | Press the 'W' key for unit movement (Phase 2). |
+| ... | ... | Extend dynamically based on learned experience (Req 2.3). |
+
+### **4.3. REWARD FUNCTION SPECIFICATION (M3 Navigation)**
+
+* **Goal:** Successfully execute the $\\text{Menu Navigation Path}$ and enter the game environment.  
+* $R\_t$ **Structure:**  
+  * **Success:** $R\_{t} \= \+100$ when $\\text{is\\\_in\\\_game}$ transitions from $0 \\rightarrow 1$.  
+  * **Invalid Action:** $R\_{t} \= \-50$ (Executing a click action when no valid $\\text{Template ID}$ is targeted).  
+  * **Time Step:** $R\_{t} \= \-1$ (Per time step to encourage fast navigation).
+
+## **5\. MODULE 4: ACTION (INPUT EMULATION)**
+
+**Goal:** Execute the action $A\_t$ generated by the RL model precisely and reliably on the macOS system. **Only pyobjc is authorized for input emulation (R2)**.
+
+| Target Action | Implementation Method | Specific Tool | Precision/Notes |
+| :---- | :---- | :---- | :---- |
+| **Mouse Click** | Low-level CoreGraphics calls. | pyobjc extension/wrapper. | Required for pixel-perfect, non-blocking input. Converts **normalized coordinates** (from $A\_t$) back to absolute pixels. |
+| **Mouse Movement** | Low-level CoreGraphics calls. | pyobjc extension/wrapper. | Smooth, non-linear interpolation is required for realistic movement. |
+| **Key Press/Release** | Low-level CoreGraphics calls. | pyobjc extension/wrapper. | Must be non-interruptive and reliable for hotkeys (e.g., 'W', 'S'). |
+
+## **6\. DATA & MLOPS SPECIFICATIONS**
+
+### **6.1. DATA ARTIFACTS (VERSION CONTROL)**
+
+| Artifact | Location/Tool | Purpose | Versioning |
+| :---- | :---- | :---- | :---- |
+| **Template Library** | File System/DVC | Visual ground-truth for Perception Module. | **Mandatory** upon any visual change (new template, edited template). |
+| **State Vector Logs** | Data Lake/W\&B | Training data ($\\text{S}\_t, \\text{A}\_t, \\text{R}\_t$). | **Mandatory** upon every training session. |
+| **Model Weights** | Git/W\&B | $\\text{SB3}$/$\\text{PyTorch}$ trained model file. | **Mandatory** upon successful $\\text{High-Priority Retraining}$. |
+| **Game Config File** | JSON/Git | Stores Menu Navigation Path, optimal Hyperparameters, and **Data Version ID**. | Updates upon M3 success, MLOps Retraining. |
+
+### **6.2. MONITORING & RETRAINING TRIGGERS**
+
+The agent must continuously monitor two classes of drift:
+
+1. **Performance Drift:**  
+   * **Metric:** 7-Day Rolling Average Success Rate ($\\text{SR}\_{7d}$).  
+   * **Trigger:** $\\text{SR}\_{7d}$ drops by $\\ge 10\\%$ compared to the previous 7-day period.  
+   * **Action:** Trigger $\\text{High-Priority Retraining Cycle}$.  
+2. **Data Drift:**  
+   * **Metric:** Statistical distribution of key State Vector inputs (e.g., $\\text{current\\\_minerals}$ average).  
+   * **Trigger:** $50\\%$ shift in the mean of a key State Vector variable (e.g., $\\text{current\\\_minerals}$) over 24 hours.  
+   * **Action:** Halt live play, trigger **Perception Module Recalibration Routine**, then trigger $\\text{High-Priority Retraining Cycle}$.

@@ -1,0 +1,22 @@
+{
+  "game_name": "Dune Legacy",
+  "version": "1.0",
+  "menu_navigation_path": [],
+  "learned_templates": {},
+  "optimal_hyperparameters": {
+    "last_updated": null,
+    "best_performance": 0.0,
+    "hyperparameters": {}
+  },
+  "data_version_id": "1.0",
+  "performance_metrics": {
+    "success_rate_7d": 0.0,
+    "average_reward": 0.0,
+    "episodes_completed": 0
+  },
+  "game_rules": {
+    "win_conditions": [],
+    "control_scheme": {},
+    "resource_types": []
+  }
+}

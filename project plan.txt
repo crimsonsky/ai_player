@@ -1,0 +1,141 @@
+---
+**PROJECT PLANNING DOCUMENT: AI PLAYER**
+
+---
+## 1. PROJECT OVERVIEW
+
+[cite_start]The AI Player project aims to develop a fully autonomous AI agent capable of interacting with and playing native computer games[cite: 1]. [cite_start]The core methodology relies on **external perception** (screen analysis) and **emulated input** (mouse/keyboard), bypassing all internal game APIs or specialized hooks[cite: 2]. [cite_start]The agent will employ Reinforcement Learning to achieve self-sufficiency and high robustness[cite: 3].
+[cite_start]**PROJECT TITLE:** AI Player [cite: 4]
+[cite_start]**PROJECT GOAL:** To create an independent AI agent that can play native application games[cite: 4].
+[cite_start]**FIRST FOCUS GAME:** Dune Legacy (Open Source Real-Time Strategy)[cite: 5].
+
+---
+## 2. TECHNICAL REQUIREMENTS & SPECIFICS
+
+1.  [cite_start]**Input Emulation (Req 2.1):** The AI player must interact with the game using direct, emulated input methods: keyboard presses, mouse movements, and mouse clicks[cite: 5]. [cite_start]**No API connections** to the game are permitted[cite: 6].
+2.  [cite_start]**Dynamic Perception (Req 2.2):** The agent must dynamically perceive and understand the game's menu systems **without any previous game-specific knowledge**[cite: 7].
+3.  [cite_start]**Learned Experience (Req 2.3):** The agent must learn from experience, saving relevant, game-specific information such as: menu navigation paths, session initiation steps, game rules, control schemes, and win conditions[cite: 7].
+4.  [cite_start]**Learning Algorithm (Req 2.4):** The core decision-making and skill improvement mechanism will use **Reinforcement Learning (RL) algorithms** (PPO/DQN)[cite: 8].
+5.  [cite_start]**Perception Methods (Req 2.5):** Screen perception will be achieved using **Optical Character Recognition (OCR)** for text reading and various **Image Recognition** methods (e.g., template matching, feature detection) for identifying menus and game elements[cite: 9].
+6.  [cite_start]**Independence & Robustness (Req 2.6):** The AI agent must be robust and **independent**, meaning its functionality must not depend on a specific game resolution, window size, or screen setup[cite: 10].
+
+---
+## 3. PROPOSED TECHNICAL STACK (MAC OS/I9/AMD GPU OPTIMIZED)
+
+[cite_start]This stack is optimized for a MacBook Pro with an Intel i9 CPU, 64GB RAM, and an AMD 5500M GPU, prioritizing Python-based tools that leverage native macOS acceleration where possible[cite: 11].
+* [cite_start]**Core Language:** **Python 3.x** (Standard for AI/ML)[cite: 12].
+* [cite_start]**DL Framework:** **PyTorch**[cite: 12]. [cite_start]Chosen for its flexible dynamic graph and ability to leverage the **Metal Performance Shaders (MPS)** backend for AMD GPU acceleration on macOS, crucial for accelerating neural network training[cite: 13].
+* **RL Implementation:** **Stable Baselines3 (SB3)**. [cite_start]Provides robust, tested implementations of modern RL algorithms (PPO is the primary candidate)[cite: 14].
+* **Screen Capture:** **Pillow / `pyobjc`**. [cite_start]Used for high-speed, non-blocking direct screen scraping from the macOS system[cite: 15].
+* **Image Processing:** **OpenCV**. [cite_start]The Computer Vision backbone, essential for feature extraction, template matching, and image preprocessing to ensure resolution independence (Req 2.6)[cite: 16].
+* **OCR (Text Reading):** **`ocrmac` (macOS Native)**. [cite_start]**CRITICAL:** This tool utilizes Apple's highly optimized **Vision Framework** for fast and accurate on-system OCR, avoiding slow CPU-heavy alternatives[cite: 17].
+* **Input Emulation:** **`PyAutoGUI` / `pyobjc` (CoreGraphics)**. [cite_start]Provides reliable mouse movement, precise clicks, and keypresses to interact with the native game application[cite: 18].
+* **Logging:** **TensorBoard / Weights & Biases (W\&B)**. [cite_start]Essential for tracking the RL agent's reward function progress and managing hyperparameter tuning[cite: 19].
+
+---
+## 4. HIGH-LEVEL ARCHITECTURE & DATA FLOW
+
+[cite_start]The AI Agent operates as a continuous, closed-loop system, abstractly managed by an **OpenAI Gym-style Custom Wrapper**[cite: 20].
+1.  [cite_start]**PERCEPTION MODULE (Input):** Screen Capture ($\text{pyobjc}$) $\rightarrow$ Image Preprocessing ($\text{OpenCV}$) $\rightarrow$ Text/Element Identification ($\text{ocrmac}$/$\text{OpenCV}$)[cite: 21].
+2.  [cite_start]**STATE REPRESENTATION:** Custom Python logic converts visual/text results into a compact, numerical **State Vector**[cite: 22]. [cite_start]This vector includes a history of the last N frames to capture dynamics[cite: 23].
+3.  [cite_start]**DECISION MODULE (RL Model):** State Vector $\rightarrow$ RL Model ($\text{SB3}$/$\text{PyTorch}$) $\rightarrow$ Outputs a specific **Action** (e.g., move mouse to $[x, y]$, click, press 'W')[cite: 24].
+4.  [cite_start]**ACTION MODULE (Output):** Action $\rightarrow$ Input Emulation ($\text{PyAutoGUI}$/$\text{pyobjc}$) $\rightarrow$ **Direct Input to Game**[cite: 25].
+5.  [cite_start]**LEARNING MODULE:** The game response returns a **Reward** (or penalty) used by PyTorch to update the RL Model's weights[cite: 26].
+
+---
+## 5. DEVELOPMENT STRATEGY & CONSTRAINTS
+
+1.  [cite_start]**Version Control (Req 3.1):** Project development must be synchronized to a designated **Git repository**[cite: 27]. [cite_start]The AI agent will be responsible for committing major features and milestones, maintaining a complete version history[cite: 28].
+2.  [cite_start]**Tool Generation (Req 3.2):** The AI agent is tasked with **generating its own support tools and support agents** as required to improve and accelerate learning, perception, and development tasks[cite: 29].
+3.  [cite_start]**Progress Focus (Req 3.3):** Development will prioritize rapid progression through milestones and the delivery of **Proof of Concepts (POCs)**[cite: 30]. [cite_start]Emphasis is on achieving functional progress[cite: 31].
+4.  [cite_start]**Documentation (Req 3.4):** The AI agent will maintain a detailed **Project Progress Document** (this file)[cite: 32]. [cite_start]This document must be regularly updated with progress made, design changes, and architectural modifications[cite: 33].
+
+---
+## 6. IMPLEMENTATION DESIGN PLAN (PHASE 1)
+
+### Phase 1: M1 - Game Launch (POC: Process Control)
+* [cite_start]**Action:** Implement the Action Module's $\text{subprocess}$ function to launch the native Dune Legacy application[cite: 34].
+* [cite_start]**Validation:** Use OS monitoring functions to confirm the game window is successfully opened and active[cite: 35].
+
+### Phase 2: M2 - Menu Reading (POC: Static Perception)
+* [cite_start]**Action:** Configure the Perception Module to utilize $\text{pyobjc}$ for capture and $\text{OpenCV}$ for normalization[cite: 36].
+* [cite_start]**Implementation:** Integrate $\text{ocrmac}$ to scan the primary menu area for text[cite: 37]. [cite_start]Simultaneously implement $\text{OpenCV}$ Template Matching against an initial library of menu button templates to locate them robustly (Req 2.6)[cite: 38].
+
+### Phase 3: M3 - Menu Navigation (POC: Simple RL Loop)
+* [cite_start]**Action:** Create the Custom Gym Wrapper[cite: 39]. [cite_start]Define the action space as a discrete set of clickable screen regions identified in M2[cite: 40].
+* [cite_start]**Training:** Initialize the **SB3 PPO Agent**[cite: 41]. Train using a sparse reward function: $+100$ for reaching the 'Mission Start' screen; $-1$ per time step; [cite_start]$-50$ for clicking an invalid area[cite: 41, 42].
+* [cite_start]**Output:** The Action Module uses $\text{PyAutoGUI}$ to execute the learned click sequences[cite: 43].
+* [cite_start]**Persistence (Req 2.3):** The successful sequence of clicks (the **Menu Navigation Path**) is saved to a persistent **Game Configuration File**[cite: 44].
+
+### Phase 4: M4 - Game State Perception (POC: Complex Dynamic Analysis)
+* [cite_start]**Action:** Expand the Perception Module with more complex logic[cite: 45]. [cite_start]Use $\text{OpenCV}$ feature detection to dynamically crop regions of interest (ROI) like the mini-map or resource panels[cite: 46].
+* [cite_start]**State Expansion:** Expand the numerical **State Vector** to include inputs from these dynamic areas, such as `current_minerals`, `selected_unit_type`, and $\text{mini_map_threat_level}$[cite: 47].
+
+---
+## 7. DATA LIFECYCLE & GOVERNANCE
+
+[cite_start]This section defines the strategy for managing the data that is consumed, generated, and learned by the AI Agent[cite: 48]. [cite_start]Given the reliance on Reinforcement Learning (RL), the quality and versioning of the unstructured screen capture data and the structured State Vector are paramount to project success[cite: 49].
+
+### 7.1. DATA COLLECTION AND STORAGE
+[cite_start]The $\text{State Logger Agent}$ (developed under Req 3.2 [cite: 50][cite_start]) is the primary data collection utility[cite: 50].
+1.  [cite_start]**Raw Data Capture (Screenshots):** The Perception Module captures raw screenshots via $\text{pyobjc}$[cite: 51]. [cite_start]Due to high volume, raw screenshots will be stored in a time-series archive and compressed (e.g., using $\text{LZ4}$ or $\text{zstd}$) rather than directly ingested by the RL model[cite: 52]. [cite_start]This data is the ground-truth for visual debugging[cite: 52].
+2.  [cite_start]**Processed Data (State Vector):** The $\text{State Logger Agent}$ continuously records the following structured, numerical triplet at every time step[cite: 53]:
+    * [cite_start]**State Vector $S_t$:** The compact input to the RL model[cite: 53].
+    * [cite_start]**Action $A_t$:** The discrete or continuous action selected by the Decision Module[cite: 54].
+    * [cite_start]**Reward $R_t$:** The scalar reward received from the environment[cite: 55].
+3.  [cite_start]**Storage Mechanism:** $\text{TensorBoard / Weights \& Biases (W\&B)}$ will be used for tracking metadata, while large datasets (raw screenshots and State Vector logs) will be stored in a dedicated, version-controlled data lake (e.g., using $\text{DVC}$ - Data Version Control, or similar file-system based tool)[cite: 56].
+
+### 7.2. DATA QUALITY AND ANNOTATION
+[cite_start]Data quality and labeling are handled primarily through the agent's self-improvement tools (Req 3.2)[cite: 57].
+1.  [cite_start]**Visual Ground-Truth (Templates):** The $\text{Template Capture Tool}$ [cite: 58] [cite_start]is the sole method for establishing visual ground-truth[cite: 58]. [cite_start]New templates are generated manually or semi-automatically and added to the $\text{Template Library}$[cite: 59]. [cite_start]The template library serves as the *labeled dataset* for the Perception Module[cite: 60].
+2.  [cite_start]**State Vector Validation:** The State Vector $S_t$ must be continuously validated to check for non-physical/impossible values (e.g., negative resource counts, coordinates outside the screen bounds)[cite: 61]. [cite_start]Automated checks will flag sessions with high rates of anomalous state readings[cite: 62].
+3.  [cite_start]**Error Handling (Recalibration):** If the $\text{ocrmac}$ or $\text{OpenCV}$ confidence scores drop below a threshold (R1) [cite: 63][cite_start], the data stream is marked as *low quality*[cite: 63]. [cite_start]The agent will automatically trigger a **Perception Module Recalibration Routine**, using the Template Library to re-anchor its vision system before continuing[cite: 64].
+
+### 7.3. DATA VERSIONING AND REPRODUCIBILITY
+[cite_start]To ensure RL model training is reproducible, data management must be separated from code management (Req 3.1)[cite: 65].
+1.  [cite_start]**Data Versioning:** All versions of the $\text{Template Library}$ and the State Vector logs (7.1, Point 2) will be tied to a specific version tag[cite: 66]. [cite_start]When the RL Model is retrained or a major change is made to the State Vector (M4 $\text{State Expansion}$), a new data version must be created[cite: 67].
+2.  [cite_start]**Hyperparameter Persistence:** Optimal RL hyperparameters must be saved alongside the resulting model weights and the corresponding Data Version ID in the $\text{Game Configuration File}$, ensuring that the entire training setup can be recalled instantly (Req 2.3)[cite: 68].
+3.  [cite_start]**Code-Data Sync:** The $\text{Git Support Agent}$ (7.1) will be extended to automatically reference the Data Version ID in its commit messages when a new model is committed (e.g., "M3 - PPO Navigation Model V2.1 using Data V1.5")[cite: 69].
+
+---
+## 8. MLOPS AND CONTINUOUS MONITORING
+
+[cite_start]This defines the strategy for maintaining the RL model's performance once Phase 1 milestones are complete[cite: 70].
+
+### 8.1. MODEL AND DATA DRIFT DETECTION
+1.  [cite_start]**Performance Drift:** The primary KPI for production monitoring is the agent's **Success Rate** (M3 and M4)[cite: 71]. [cite_start]If the 7-day rolling average $\text{Success Rate}$ drops by $10\%$ or more, a performance alert is triggered[cite: 72].
+2.  [cite_start]**Data Drift:** The model's inputs (State Vector) will be monitored for statistical shifts[cite: 73]. [cite_start]For example, if the average $\text{current\_minerals}$ value suddenly changes by $50\%$ due to an unannounced game patch, a **Data Drift Alert** is triggered, indicating the Perception Module is misreading the UI[cite: 74].
+3.  [cite_start]**Monitoring Tools:** $\text{Weights \& Biases (W\&B)}$ will be configured to continuously track and visualize these production KPIs and distributions[cite: 75].
+
+### 8.2. AUTOMATED RETRAINING POLICY
+[cite_start]The AI Agent will follow a defined, automated policy for retraining its core RL model[cite: 76].
+1.  [cite_start]**Scheduled Retraining:** The RL Model will undergo a mandatory **full retraining cycle** every 30 days to ensure continuous adaptation and incorporation of new experience[cite: 77].
+2.  [cite_start]**Alert-Triggered Retraining:** Any **Performance Drift Alert** or **Data Drift Alert** (8.1) will automatically halt the agent's live play and trigger a **High-Priority Retraining Cycle** using the most recent high-quality data (7.2)[cite: 78].
+3.  [cite_start]**Model Promotion:** A newly trained model version is only promoted to production use if its offline validation metrics (e.g., 'Episode Reward', 'Time-to-Start-Mission') surpass the previous production model's benchmark[cite: 79].
+
+---
+## 9. SUCCESS METRICS & RISK REGISTER (IMPROVED)
+
+### Success Metrics
+* [cite_start]**Menu Navigation:** Key Performance Indicators (KPIs) are the **Time-to-Start-Mission** (seconds) and **Success Rate** ($\%$ of successful launches)[cite: 87].
+* [cite_start]**In-Game Play:** KPIs are **Game Time Survived** (minutes) and **Resource Efficiency** (rate of resource accumulation)[cite: 88].
+* [cite_start]**Reward Strategy (IMPROVED):** An initial sparse reward system is used for navigation, transitioning to a **dense, quantifiable reward system** for in-game play[cite: 89]. Examples:
+    * **Phase 2 Example (Resource):** $+1$ for every 100 spice/resource collected.
+    * **Phase 2 Example (Action):** $+5$ for successful production of a new unit.
+    * **Phase 3 Example (Objective):** $+50$ for destroying an enemy building.
+
+### Risk Register
+* [cite_start]**R1: Dynamic UI/OCR Failures (High Severity) (IMPROVED MITIGATION):** Mitigation is relying on a blend of **Template Matching ($\text{OpenCV}$)** for known features and the high-performance **$\text{ocrmac}$** for text[cite: 90]. Failure will trigger a defined **Perception Module Recalibration Routine**:
+    1.  Pause game input.
+    2.  Capture a new, full screen image.
+    3.  Re-run $\text{OpenCV}$ template matching to re-establish the coordinates of known elements ($\text{Template Library}$).
+    4.  Update the Perception Module's dynamic cropping coordinates (M4).
+    5.  Resume game input only if confidence scores recover.
+* [cite_start]**R2: Input Instability (macOS) (Medium Severity):** Mitigation involves using the most stable cross-platform library ($\text{PyAutoGUI}$), with a contingency plan to move to low-level macOS system calls via $\text{pyobjc}$ for greater precision and reliability[cite: 91].
+* [cite_start]**R3: RL Training Time (High Severity):** Mitigation involves the essential use of **PyTorch/MPS GPU acceleration** and a prioritized focus on efficient algorithms like PPO to minimize training epochs[cite: 92].
+
+---
+## 10. FUTURE PHASES (VISION)
+
+* [cite_start]**Phase 2: Tactical Basics:** AI learns fundamental unit control, resource harvesting, and defense against initial, simple threats within the game world[cite: 93].
+* [cite_start]**Phase 3: Strategic Play:** AI learns complex macro-level decision-making, including base building, managing production queues, and executing game-winning strategies[cite: 93].
