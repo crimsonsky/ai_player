@@ -257,13 +257,46 @@ class OCRIntegrationModule:
         try:
             print(f"   🔤 Using Tesseract for {region_name}")
             
-            # Crop image to ROI if possible
-            cropped_path = self._crop_image_for_ocr(screenshot_path, roi, region_name)
-            image_to_process = cropped_path if cropped_path else screenshot_path
+            # Convert image to format Tesseract can read reliably
+            from PIL import Image
+            import tempfile
             
-            # Run Tesseract
-            result = subprocess.run(['tesseract', image_to_process, 'stdout'], 
+            # Generate temporary file path
+            temp_path = f"/tmp/tesseract_input_{region_name}_{int(time.time())}.tiff"
+            
+            # Open the screenshot and process it
+            with Image.open(screenshot_path) as img:
+                # Crop to ROI if needed
+                if roi != (0, 0, 1, 1):  # If not full image
+                    width, height = img.size
+                    x_norm, y_norm, w_norm, h_norm = roi
+                    x_pixel = int(x_norm * width)
+                    y_pixel = int(y_norm * height)
+                    w_pixel = int(w_norm * width)
+                    h_pixel = int(h_norm * height)
+                    
+                    # Crop to ROI
+                    cropped = img.crop((x_pixel, y_pixel, x_pixel + w_pixel, y_pixel + h_pixel))
+                else:
+                    cropped = img
+                
+                # Save as temporary file in format Tesseract can read
+                cropped.save(temp_path, format='TIFF')
+            
+            # Verify file was created
+            if not os.path.exists(temp_path):
+                print(f"      ❌ Failed to create temp file: {temp_path}")
+                return results
+            
+            # Run Tesseract on the properly formatted image
+            result = subprocess.run(['tesseract', temp_path, 'stdout'], 
                                   capture_output=True, text=True, timeout=15)
+            
+            # Clean up temporary file
+            try:
+                os.remove(temp_path)
+            except:
+                pass
             
             if result.returncode == 0 and result.stdout.strip():
                 raw_text = result.stdout.strip()
@@ -271,15 +304,17 @@ class OCRIntegrationModule:
                 
                 # Process extracted text
                 processed_results = self._process_extracted_text(
-                    raw_text, roi, region_name, text_type, "tesseract", 0.8
+                    raw_text, roi, region_name, text_type, "tesseract", 0.9
                 )
                 results.extend(processed_results)
             else:
                 print(f"      ⚠️ Tesseract returned no text for {region_name}")
+                if result.stderr:
+                    print(f"      ⚠️ Tesseract stderr: {result.stderr.strip()}")
             
-            # Cleanup cropped image
-            if cropped_path and os.path.exists(cropped_path):
-                os.remove(cropped_path)
+            # Cleanup temporary file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
                 
         except Exception as e:
             print(f"      ❌ Tesseract error: {e}")

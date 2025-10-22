@@ -17,12 +17,18 @@ The AI Player operates as an encapsulated Reinforcement Learning environment (Gy
 
 **Goal:** Robustly and independently identify the location and value of critical game elements, regardless of resolution or window size (Req 2.6).
 
+**PERCEPTION FUSION (2C + 2D):** Mandatory integration of Template Matching (2C) with Text Extraction (2D) to use extracted text as semantic identifier for element classification.
+
+**Classification Logic:**
+- **Button Confirmation:** `MENU_BTN_` template + known menu text (e.g., "Single Player", "Options") = Functional Button
+- **Label Rejection:** `MENU_BTN_` template + "DUNE LEGACY" text = Visual Anchor (clickability=False)
+
 | Sub-Module | Technology | Function | Output Format |
 | :---- | :---- | :---- | :---- |
 | **A. Screen Capture** | pyobjc | High-speed, non-blocking capture of the entire active screen. | Raw $\\text{PIL}$ Image (RGB) |
 | **B. Template Library** | OpenCV | Database of pre-labeled UI templates (buttons, resources, units). **Version Controlled (DVC)**. | JSON array of $\\text{Template ID}$, $\\text{Image Path}$, $\\text{Confidence Threshold}$. |
-| **C. Element Location** | OpenCV | Template Matching / Feature Detection (e.g., SIFT/ORB) to find matches from 1B in 1A. **Coordinates MUST be normalized (0 to 1\)**. | List of $\\text{\\{ID, Normalized (x, y), Confidence Score\\}}$. |
-| **D. Text Extraction** | ocrmac | Target specific Regions of Interest (ROI) identified by 1C (e.g., resource counters). | Dictionary of $\\text{\\{Label (e.g., "Spice"), Numeric Value\\}}$. |
+| **C. Element Location** | OpenCV | Template Matching / Feature Detection (e.g., SIFT/ORB) to find matches from 1B in 1A. **PERCEPTION FUSION: Integrated with 2D for semantic identification**. **Coordinates MUST be normalized (0 to 1\)**. | List of $\\text{\\{ID, Normalized (x, y), Confidence Score, **Text Label**, **Is Functional Button**\\}}$. |
+| **D. Text Extraction** | ocrmac | **INTEGRATED WITH 2C**: OCR executed on template match ROI for semantic identification. Distinguishes functional buttons from visual anchors. | $\\text{Text Label}$ and classification ($\\text{Functional Button}$ vs $\\text{Visual Anchor}$). |
 | **E. Recalibration** | **Custom Routine** | **CRITICAL MITIGATION (R1):** Triggered if $\\text{Confidence Score} \< 0.8$. | Recaptures full screen, re-runs 1C/1D, updates dynamic ROI coordinates for M4. |
 
 ## **3\. MODULE 2: STATE REPRESENTATION (FEATURES $\\rightarrow$ $S\_t$)**

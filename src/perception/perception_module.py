@@ -154,21 +154,165 @@ class PerceptionModule:
             print(f"❌ Screen capture error: {e}")
             return None
     
-    @with_timeout(15)
-    def analyze_menu_screen(self, screenshot_path: str) -> Dict[str, Any]:
+    def identify_screen_context(self, screenshot_path: str) -> str:
         """
-        Complete M2 menu analysis: template matching + OCR.
+        LEVEL-1 ARCHITECTURAL CORRECTION: Screen Context Identifier
+        Detects unique visual anchors to determine current screen context.
+        This prevents Template Overlap (R1) by gating template matching.
         
         Args:
-            screenshot_path: Path to screenshot image
+            screenshot_path: Path to screenshot to analyze
             
         Returns:
-            Dict containing detected elements, text, and confidence scores
+            str: Screen context ID ('MAIN_MENU', 'SINGLE_PLAYER_SUB_MENU', 'UNKNOWN')
         """
-        self.audio_signal("Analyzing menu screen")
+        try:
+            # Load screenshot
+            image = cv2.imread(screenshot_path)
+            if image is None:
+                return 'UNKNOWN'
+            
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            h, w = gray.shape
+            
+            # MAIN MENU VISUAL ANCHOR: Look for "Dune Legacy" headline
+            # This should be a large text area in the upper portion of main menu
+            main_menu_indicators = []
+            
+            # Check for main menu layout patterns
+            # Look for horizontal button arrangement in center-lower area
+            center_y = h // 2
+            lower_third = h * 2 // 3
+            
+            # Apply edge detection to find button-like rectangles
+            edges = cv2.Canny(gray, 50, 150)
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            horizontal_buttons = 0
+            vertical_buttons = 0
+            
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                
+                # Filter for button-like regions
+                if (w > 100 and w < 400 and h > 30 and h < 80 and 
+                    cv2.contourArea(contour) > 1000):
+                    
+                    # Check if in main menu button area (center-lower)
+                    if center_y < y < lower_third:
+                        horizontal_buttons += 1
+                    # Check if in submenu area (more vertical layout)
+                    elif y > center_y:
+                        vertical_buttons += 1
+            
+            # SINGLE PLAYER SUBMENU VISUAL ANCHOR
+            # Look for different layout pattern - more vertical button arrangement
+            # or specific submenu indicators
+            
+            # Main menu typically has 3-5 horizontal buttons in center
+            # Submenu typically has more vertical button arrangement
+            
+            print(f"   Screen Context Analysis:")
+            print(f"      Horizontal buttons (main menu area): {horizontal_buttons}")
+            print(f"      Vertical buttons (submenu area): {vertical_buttons}")
+            
+            # Enhanced decision logic with multiple detection methods
+            
+            # Method 1: Button layout analysis
+            layout_score_main = 0
+            layout_score_submenu = 0
+            
+            if horizontal_buttons >= 3:
+                layout_score_main += 2
+            if vertical_buttons >= 2:
+                layout_score_submenu += 2
+            
+            # Method 2: Screen region analysis
+            # Look for text patterns that indicate different screens
+            upper_region = gray[:h//3, :]  # Top third
+            lower_region = gray[2*h//3:, :]  # Bottom third
+            
+            # Apply more aggressive edge detection for text
+            upper_edges = cv2.Canny(upper_region, 30, 100)
+            lower_edges = cv2.Canny(lower_region, 30, 100)
+            
+            # Count edge density (more edges = more text/UI elements)
+            upper_density = np.sum(upper_edges > 0) / (upper_edges.shape[0] * upper_edges.shape[1])
+            lower_density = np.sum(lower_edges > 0) / (lower_edges.shape[0] * lower_edges.shape[1])
+            
+            # Main menu typically has centered layout
+            # Submenu typically has more content in upper region
+            if upper_density > 0.02:  # Significant content in upper region
+                layout_score_submenu += 1
+            if lower_density > 0.015:  # Content in lower region
+                layout_score_main += 1
+            
+            # Method 3: Button position analysis
+            center_buttons = 0
+            upper_buttons = 0
+            
+            for contour in contours:
+                x, y, w, h_rect = cv2.boundingRect(contour)
+                if (w > 100 and w < 400 and h_rect > 30 and h_rect < 80 and 
+                    cv2.contourArea(contour) > 1000):
+                    
+                    if h//3 < y < 2*h//3:  # Center region
+                        center_buttons += 1
+                    elif y < h//2:  # Upper region
+                        upper_buttons += 1
+            
+            # Main menu has buttons centered, submenu has buttons higher
+            if center_buttons >= 2:
+                layout_score_main += 1
+            if upper_buttons >= 1:
+                layout_score_submenu += 1
+            
+            print(f"      Main menu score: {layout_score_main}")
+            print(f"      Submenu score: {layout_score_submenu}")
+            print(f"      Upper density: {upper_density:.4f}")
+            print(f"      Lower density: {lower_density:.4f}")
+            print(f"      Center buttons: {center_buttons}, Upper buttons: {upper_buttons}")
+            
+            # Final decision based on scores
+            if layout_score_main > layout_score_submenu:
+                context = 'MAIN_MENU'
+            elif layout_score_submenu > layout_score_main:
+                context = 'SINGLE_PLAYER_SUB_MENU'
+            else:
+                # Fallback: Use simple button count heuristic
+                if horizontal_buttons >= 3 and vertical_buttons <= 2:
+                    context = 'MAIN_MENU'
+                elif vertical_buttons >= 2 and horizontal_buttons <= 2:
+                    context = 'SINGLE_PLAYER_SUB_MENU'
+                else:
+                    context = 'UNKNOWN'
+            
+            print(f"   🎯 Screen Context Identified: {context}")
+            
+            return context
+            
+        except Exception as e:
+            print(f"❌ Screen context identification failed: {e}")
+            return 'UNKNOWN'
+
+    @with_timeout(10)
+    def analyze_menu_screen(self, screenshot_path: str) -> Dict[str, Any]:
+        """
+        Enhanced menu analysis with perception fusion (M2 implementation).
+        NOW INCLUDES SCREEN CONTEXT GATING TO PREVENT TEMPLATE OVERLAP.
+        
+        Args:
+            screenshot_path: Path to screenshot to analyze
+            
+        Returns:
+            Dict containing analysis results with template and OCR data
+        """
+        self.audio_signal("Analyzing menu screen with perception fusion")
         
         analysis_result = {
-            "templates_detected": [],
+            "screen_context": None,  # NEW: Screen Context ID
+            "elements_detected": [],  # Updated structure with semantic validation
+            "templates_detected": [],  # Legacy compatibility
             "text_extracted": {},
             "average_confidence": 0.0,
             "recalibration_needed": False,
@@ -176,46 +320,78 @@ class PerceptionModule:
         }
         
         try:
-            # Step 1: Template matching (if available)
-            if self.template_library:
-                print("🔍 Running template matching...")
-                template_matches = self.template_library.detect_elements_fallback(screenshot_path)
-                
-                for match in template_matches:
-                    template_data = {
-                        "template_id": match.template_id,
-                        "normalized_x": match.normalized_x,
-                        "normalized_y": match.normalized_y,
-                        "confidence": match.confidence,
-                        "roi": match.roi
-                    }
-                    analysis_result["templates_detected"].append(template_data)
-                
-                print(f"   📍 Found {len(template_matches)} template matches")
+            # STEP 1: SCREEN CONTEXT IDENTIFICATION (CRITICAL FOR TEMPLATE OVERLAP PREVENTION)
+            print("🎯 STEP 1: Identifying Screen Context...")
+            screen_context = self.identify_screen_context(screenshot_path)
+            analysis_result["screen_context"] = screen_context
             
-            # Step 2: OCR text extraction (if available)
-            if self.ocr_manager:
-                print("📝 Running OCR text extraction...")
-                text_data = self.ocr_manager.extract_menu_text(screenshot_path)
-                analysis_result["text_extracted"] = text_data
-                
-                print(f"   📋 Extracted: '{text_data.get('title', '')}' + {len(text_data.get('menu_items', []))} menu items")
+            if screen_context == 'UNKNOWN':
+                print("⚠️ Warning: Unknown screen context - proceeding with caution")
             
-            # Step 3: Calculate overall confidence
+            # STEP 2: PERCEPTION FUSION (2C + 2D) WITH TEMPLATE GATING
+            print("🔍 STEP 2: PERCEPTION FUSION - Template Matching + OCR + Semantic Validation...")
+            
+            # Initialize ElementLocationModule for enhanced detection
+            from src.perception.element_location import ElementLocationModule
+            
+            element_config = {
+                'templates_dir': 'data/templates',
+                'confidence_threshold': self.confidence_threshold,
+                'audio_feedback': self.audio_enabled,
+                'screen_context': screen_context  # NEW: Pass context for template gating
+            }
+            
+            element_locator = ElementLocationModule(element_config)
+            
+            # Execute CONTEXT-GATED element detection with perception fusion
+            detected_elements = element_locator.detect_all_elements_with_context(screenshot_path, screen_context)
+            
+            # TEMPLATE OVERLAP PREVENTION: Apply semantic validation
+            validated_elements = self._apply_template_overlap_prevention(detected_elements, screen_context)
+            
+            print(f"   📊 Screen Context: {screen_context}")
+            print(f"   🔍 Raw detections: {len(detected_elements)}")
+            print(f"   ✅ Validated elements: {len(validated_elements)}")
+            
+            # STEP 3: AUDIO FEEDBACK OF DETECTED ELEMENTS
+            self._provide_audio_element_feedback(validated_elements, screen_context)
+            
+            # Process validated elements
             confidences = []
             
-            # Add template confidences
-            for template in analysis_result["templates_detected"]:
-                confidences.append(template["confidence"])
+            for element in validated_elements:
+                # New enhanced structure with semantic validation
+                element_data = {
+                    "template_id": element.template_id,
+                    "name": element.name,
+                    "normalized_x": element.normalized_x,
+                    "normalized_y": element.normalized_y,
+                    "confidence": element.confidence,
+                    "roi": element.roi,
+                    "method": element.method,
+                    "text_label": element.text_label,
+                    "is_functional_button": element.is_functional_button,
+                    "text_confidence": element.text_confidence
+                }
+                analysis_result["elements_detected"].append(element_data)
+                
+                # Legacy compatibility structure
+                template_data = {
+                    "template_id": element.template_id,
+                    "normalized_x": element.normalized_x,
+                    "normalized_y": element.normalized_y,
+                    "confidence": element.confidence,
+                    "roi": element.roi
+                }
+                analysis_result["templates_detected"].append(template_data)
+                
+                confidences.append(element.confidence)
             
-            # Add OCR confidence
-            if "confidence" in analysis_result["text_extracted"]:
-                confidences.append(analysis_result["text_extracted"]["confidence"])
-            
+            # Calculate overall confidence
             if confidences:
                 analysis_result["average_confidence"] = sum(confidences) / len(confidences)
             
-            # Step 4: Check if recalibration needed
+            # Step 2: Check if recalibration needed
             if analysis_result["average_confidence"] < self.confidence_threshold:
                 analysis_result["recalibration_needed"] = True
                 print(f"⚠️ Low confidence ({analysis_result['average_confidence']:.2f} < {self.confidence_threshold})")
@@ -231,6 +407,96 @@ class PerceptionModule:
             analysis_result["recalibration_needed"] = True
             return analysis_result
     
+    def _apply_template_overlap_prevention(self, detected_elements: List, screen_context: str) -> List:
+        """
+        TEMPLATE OVERLAP PREVENTION: Filter elements based on screen context.
+        Prevents main menu templates from matching on submenu screens.
+        
+        Args:
+            detected_elements: Raw detected elements
+            screen_context: Current screen context ID
+            
+        Returns:
+            List of validated elements
+        """
+        if not detected_elements:
+            return []
+        
+        validated_elements = []
+        
+        # Define template context mapping
+        main_menu_templates = ['SINGLE_PLAYER', 'MULTIPLAYER', 'OPTIONS', 'QUIT']
+        submenu_templates = ['BACK', 'CAMPAIGN', 'SKIRMISH', 'CUSTOM_GAME', 'LOAD_GAME']
+        
+        print(f"   🛡️ TEMPLATE OVERLAP PREVENTION - Context: {screen_context}")
+        
+        for element in detected_elements:
+            template_id = getattr(element, 'template_id', 'UNKNOWN')
+            
+            # Apply context-based filtering
+            should_include = True
+            
+            if screen_context == 'MAIN_MENU':
+                # On main menu, exclude submenu-specific templates
+                if any(submenu_tmpl in template_id.upper() for submenu_tmpl in submenu_templates):
+                    if 'BACK' not in template_id.upper():  # Allow BACK on main menu for navigation
+                        should_include = False
+                        print(f"      ❌ Filtered {template_id}: submenu template on main menu")
+                        
+            elif screen_context == 'SINGLE_PLAYER_SUB_MENU':
+                # On submenu, exclude main menu templates (CRITICAL FIX)
+                if any(main_tmpl in template_id.upper() for main_tmpl in main_menu_templates):
+                    should_include = False
+                    print(f"      ❌ CRITICAL: Filtered {template_id}: main menu template on submenu")
+            
+            if should_include:
+                validated_elements.append(element)
+                print(f"      ✅ Validated {template_id}: appropriate for {screen_context}")
+        
+        return validated_elements
+    
+    def _provide_audio_element_feedback(self, validated_elements: List, screen_context: str) -> None:
+        """
+        Provide audio feedback listing all detected elements.
+        Critical for M2 validation to ensure no 'Single Player' on submenu.
+        
+        Args:
+            validated_elements: List of validated elements
+            screen_context: Current screen context
+        """
+        if not validated_elements:
+            self.audio_signal("No elements detected")
+            return
+        
+        # Build audio report
+        element_names = []
+        for element in validated_elements:
+            text_label = getattr(element, 'text_label', None)
+            template_id = getattr(element, 'template_id', 'UNKNOWN')
+            
+            # Use text label if available, otherwise template ID
+            name = text_label if text_label and text_label.strip() else template_id.replace('_', ' ')
+            element_names.append(name)
+        
+        # Create audio report
+        context_phrase = screen_context.replace('_', ' ').lower()
+        elements_phrase = ', '.join(element_names)
+        
+        audio_message = f"On {context_phrase}, detected elements: {elements_phrase}"
+        
+        print(f"   🔊 Audio Report: {audio_message}")
+        self.audio_signal(audio_message)
+        
+        # CRITICAL CHECK: Ensure no 'Single Player' on submenu
+        if screen_context == 'SINGLE_PLAYER_SUB_MENU':
+            for name in element_names:
+                if 'single player' in name.lower():
+                    print(f"   ❌ CRITICAL ERROR: 'Single Player' detected on submenu!")
+                    self.audio_signal("CRITICAL ERROR: Single Player template overlap detected!")
+                    break
+            else:
+                print(f"   ✅ Template Overlap Prevention SUCCESS: No 'Single Player' on submenu")
+
     def run_full_m2_pipeline(self, app_name: str = "Dune Legacy") -> Dict[str, Any]:
         """
         Complete M2 - Menu Reading POC pipeline.
@@ -533,3 +799,4 @@ class PerceptionModule:
         except Exception as e:
             print(f"Error adding template {template_id}: {e}")
             return False
+    
