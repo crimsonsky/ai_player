@@ -489,10 +489,13 @@ class ElementLocationModule:
         return matches
     
     def _fallback_roi_detection(self, screenshot_path: str) -> List[ElementMatch]:
-        """Complete fallback detection using basic ROI analysis."""
-        print("🔄 Using fallback ROI detection")
+        """REMOVED: No fallback ROI detection - throw error when real detection fails."""
+        print("❌ ELEMENT DETECTION FAILED: Cannot proceed without working detection methods")
         
-        matches = []
+        raise RuntimeError(
+            "ELEMENT_DETECTION_FAILED: All element detection methods failed. "
+            "Cannot use fallback ROI analysis. Check OpenCV installation or screenshot quality."
+        )
         
         # Get image dimensions
         try:
@@ -671,10 +674,12 @@ class ElementLocationModule:
             return False
     
     def _fallback_semantic_classification(self, template_id: str) -> Tuple[str, float, bool]:
-        """Fallback semantic classification when OCR is not available."""
+        """REMOVED: No fallback semantic classification - OCR must work."""
         
-        # Extract likely text from template name/ID
-        template_name = self.template_library.get(template_id, {}).get('name', template_id)
+        raise RuntimeError(
+            f"SEMANTIC_CLASSIFICATION_FAILED: Cannot classify template '{template_id}' without working OCR. "
+            "Fix OCR system to proceed with element classification."
+        )
         
         # Default functional button classification based on template ID
         if template_id.startswith('MENU_BTN_') or 'button' in template_id.lower():

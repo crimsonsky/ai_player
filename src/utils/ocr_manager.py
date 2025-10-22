@@ -29,7 +29,24 @@ class OCRManager:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.audio_enabled = config.get('audio_feedback', True)
-        self.ocr_method = self._detect_best_ocr_method()
+        
+        # Check if a specific OCR engine is requested in config
+        preferred_engine = config.get('ocr_engine')
+        if preferred_engine == 'tesseract':
+            # Force tesseract usage
+            try:
+                result = subprocess.run(['which', 'tesseract'], 
+                                      capture_output=True, text=True)
+                if result.returncode == 0:
+                    self.ocr_method = "tesseract"
+                    print("✅ Using tesseract OCR engine (forced by config)")
+                else:
+                    raise Exception("Tesseract not found")
+            except:
+                print("❌ Tesseract forced but not available, falling back to auto-detection")
+                self.ocr_method = self._detect_best_ocr_method()
+        else:
+            self.ocr_method = self._detect_best_ocr_method()
         
     def audio_signal(self, message: str):
         """Provide audio feedback."""
@@ -40,41 +57,48 @@ class OCRManager:
                 print(f"🔊 Audio: {message}")
     
     def _detect_best_ocr_method(self) -> str:
-        """Detect the best available OCR method."""
+        """
+        Detect the best available OCR method.
         
-        # Method 1: Try ocrmac (Apple Vision Framework)
+        LEVEL-5 ARCHITECTURAL CORRECTION: Prioritize Apple Vision Framework
+        """
+        
+        # Method 1: Apple Vision Framework (LEVEL-5 MANDATE)
+        try:
+            # Test if Apple Vision Framework is available via PyObjC
+            import Vision
+            import Foundation
+            import Quartz
+            print("✅ Apple Vision Framework available (Level-5 mandate)")
+            return "apple_vision"
+        except ImportError:
+            print("⚠️ Apple Vision Framework not available - falling back")
+        except Exception as e:
+            print(f"⚠️ Vision Framework test error: {e}")
+        
+        # Method 2: Try ocrmac (Legacy Apple Vision)
         try:
             result = subprocess.run(['which', 'ocrmac'], 
                                   capture_output=True, text=True)
             if result.returncode == 0:
-                print("✅ ocrmac (Apple Vision Framework) available")
+                print("✅ ocrmac (Legacy Apple Vision) available")
                 return "ocrmac"
         except:
             pass
         
-        # Method 2: Try built-in macOS OCR via shortcuts
-        try:
-            # Test if we can use Shortcuts app for OCR (macOS Monterey+)
-            result = subprocess.run(['shortcuts', 'list'], 
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                print("✅ macOS Shortcuts OCR available")
-                return "shortcuts"
-        except:
-            pass
-        
-        # Method 3: Check for Tesseract
+        # Method 3: Check for Tesseract (DECOMMISSIONED per Level-5)
         try:
             result = subprocess.run(['which', 'tesseract'], 
                                   capture_output=True, text=True)
             if result.returncode == 0:
-                print("✅ Tesseract OCR available")
+                print("⚠️ Tesseract available but DECOMMISSIONED per Level-5 correction")
+                print("   Using as emergency fallback only")
                 return "tesseract"
         except:
             pass
         
-        print("⚠️ No OCR engines found, using fallback text detection")
-        return "fallback"
+        print("❌ CRITICAL: No OCR engines found - cannot proceed")
+        raise RuntimeError("NO_OCR_ENGINES: Apple Vision Framework required for Level-5 architecture. Install PyObjC and Vision framework.")
     
     def extract_text_from_image(self, image_path: str, 
                                roi: Optional[Tuple[float, float, float, float]] = None) -> List[OCRResult]:
@@ -89,14 +113,137 @@ class OCRManager:
             List of OCRResult objects
         """
         
-        if self.ocr_method == "ocrmac":
+        if self.ocr_method == "apple_vision":
+            return self._extract_with_apple_vision(image_path, roi)
+        elif self.ocr_method == "ocrmac":
             return self._extract_with_ocrmac(image_path, roi)
         elif self.ocr_method == "shortcuts":
             return self._extract_with_shortcuts(image_path, roi)
         elif self.ocr_method == "tesseract":
             return self._extract_with_tesseract(image_path, roi)
         else:
-            return self._extract_with_fallback(image_path, roi)
+            raise RuntimeError(f"UNKNOWN_OCR_METHOD: '{self.ocr_method}' is not supported. Use 'apple_vision', 'ocrmac', 'shortcuts', or 'tesseract'.")
+    
+    def extract_text_from_screenshot(self, screenshot_array, 
+                                   roi: Optional[Tuple[float, float, float, float]] = None) -> Dict[str, Any]:
+        """
+        Extract text from screenshot numpy array.
+        
+        Args:
+            screenshot_array: numpy array from screen capture
+            roi: Optional region of interest (normalized coordinates)
+            
+        Returns:
+            Dict with 'success', 'text', and optional 'error' keys
+        """
+        try:
+            import tempfile
+            import cv2
+            
+            # Save screenshot array to temporary file
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                temp_path = temp_file.name
+                
+            # Convert BGR to RGB if needed and save
+            if len(screenshot_array.shape) == 3 and screenshot_array.shape[2] == 3:
+                # Assume BGR format from OpenCV, convert to RGB for saving
+                rgb_array = cv2.cvtColor(screenshot_array, cv2.COLOR_BGR2RGB)
+                cv2.imwrite(temp_path, cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR))
+            else:
+                cv2.imwrite(temp_path, screenshot_array)
+            
+            # Use Apple Vision Framework directly on screenshot array if available
+            if self.ocr_method == "apple_vision":
+                try:
+                    from .apple_vision_ocr import create_apple_vision_ocr
+                    
+                    vision_ocr = create_apple_vision_ocr(self.config)
+                    result = vision_ocr.extract_text_from_screenshot(screenshot_array, roi)
+                    
+                    # Clean up temporary file
+                    try:
+                        os.unlink(temp_path)
+                    except:
+                        pass
+                    
+                    return result
+                    
+                except Exception as e:
+                    print(f"⚠️ Direct Vision Framework extraction failed: {e}")
+                    # Fall back to file-based extraction
+            
+            # Extract text using existing method (file-based)
+            ocr_results = self.extract_text_from_image(temp_path, roi)
+            
+            # Clean up temporary file
+            import os
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+            # Convert OCRResult list to simple dict format
+            if ocr_results and len(ocr_results) > 0:
+                combined_text = ' '.join([result.text for result in ocr_results if result.text])
+                return {
+                    'success': True,
+                    'text': combined_text,
+                    'results': ocr_results
+                }
+            else:
+                return {
+                    'success': False,
+                    'text': '',
+                    'error': 'No text detected'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'text': '',
+                'error': str(e)
+            }
+    
+    def _extract_with_apple_vision(self, image_path: str, 
+                                 roi: Optional[Tuple[float, float, float, float]] = None) -> List[OCRResult]:
+        """
+        Extract text using Apple Vision Framework.
+        
+        LEVEL-5 ARCHITECTURAL CORRECTION: Primary OCR method for Signal Fusion Engine.
+        """
+        try:
+            print("🔍 Using Apple Vision Framework for text extraction...")
+            
+            # Import and initialize Apple Vision OCR
+            from .apple_vision_ocr import create_apple_vision_ocr
+            
+            vision_ocr = create_apple_vision_ocr(self.config)
+            
+            # Extract text using Vision Framework
+            result = vision_ocr.extract_text_from_image_path(image_path, roi)
+            
+            if result['success']:
+                # Convert Apple Vision results to OCRResult format
+                ocr_results = []
+                
+                for vision_result in result['results']:
+                    ocr_result = OCRResult(
+                        text=vision_result.text,
+                        confidence=vision_result.confidence,
+                        normalized_bbox=vision_result.normalized_bbox
+                    )
+                    ocr_results.append(ocr_result)
+                
+                print(f"   📝 Apple Vision extracted {len(ocr_results)} text regions")
+                return ocr_results
+                
+            else:
+                print(f"   ❌ Apple Vision extraction failed: {result['error']}")
+                raise RuntimeError(f"APPLE_VISION_OCR_FAILED: {result['error']}")
+                
+        except Exception as e:
+            print(f"   ❌ Apple Vision Framework error: {e}")
+            raise RuntimeError(f"APPLE_VISION_OCR_FAILED: Apple Vision Framework text extraction failed: {e}")
     
     def _extract_with_ocrmac(self, image_path: str, 
                            roi: Optional[Tuple[float, float, float, float]] = None) -> List[OCRResult]:
@@ -139,7 +286,7 @@ class OCRManager:
                 
         except Exception as e:
             print(f"❌ ocrmac error: {e}")
-            return self._extract_with_fallback(image_path, roi)
+            raise RuntimeError(f"OCRMAC_FAILED: ocrmac text extraction failed: {e}")
     
     def _extract_with_shortcuts(self, image_path: str,
                               roi: Optional[Tuple[float, float, float, float]] = None) -> List[OCRResult]:
@@ -148,13 +295,12 @@ class OCRManager:
         try:
             print("🔍 Using macOS Shortcuts for text extraction...")
             
-            # This is a placeholder - implementing Shortcuts OCR would require
-            # creating a custom shortcut. For now, fall back to basic method.
-            return self._extract_with_fallback(image_path, roi)
+            # This method is not implemented yet
+            raise RuntimeError("SHORTCUTS_OCR_NOT_IMPLEMENTED: macOS Shortcuts OCR is not yet implemented")
             
         except Exception as e:
             print(f"❌ Shortcuts OCR error: {e}")
-            return self._extract_with_fallback(image_path, roi)
+            raise RuntimeError(f"SHORTCUTS_OCR_FAILED: macOS Shortcuts OCR failed: {e}")
     
     def _extract_with_tesseract(self, image_path: str,
                               roi: Optional[Tuple[float, float, float, float]] = None) -> List[OCRResult]:
@@ -196,48 +342,21 @@ class OCRManager:
                 
         except Exception as e:
             print(f"❌ Tesseract error: {e}")
-            return self._extract_with_fallback(image_path, roi)
+            raise RuntimeError(f"TESSERACT_OCR_FAILED: Tesseract text extraction failed: {e}")
     
     def _extract_with_fallback(self, image_path: str,
                              roi: Optional[Tuple[float, float, float, float]] = None) -> List[OCRResult]:
-        """Fallback text extraction using pattern matching on common menu text."""
+        """REMOVED: No fallback data - throw error when real OCR fails."""
         
-        print("🔍 Using fallback pattern-based text detection...")
+        print("❌ OCR FAILURE: Real text extraction failed")
+        print("❌ NO FALLBACK DATA: System cannot generate fake coordinates")
+        print("❌ CRITICAL ERROR: Cannot detect interface elements without working OCR")
         
-        # Common Dune Legacy menu text patterns
-        menu_patterns = [
-            ("Start Game", 0.85),
-            ("New Game", 0.85),
-            ("Load Game", 0.85),
-            ("Options", 0.85),
-            ("Settings", 0.85),
-            ("Quit", 0.85),
-            ("Exit", 0.85),
-            ("Dune Legacy", 0.9),
-            ("Mission", 0.8),
-            ("Campaign", 0.8)
-        ]
-        
-        results = []
-        
-        # Simulate finding these text elements in expected locations
-        for i, (text, confidence) in enumerate(menu_patterns[:4]):  # Limit to first 4
-            # Distribute vertically in the assumed menu area
-            y_position = 0.4 + (i * 0.1)  # Start at 40%, space by 10%
-            
-            bbox = (0.3, y_position, 0.4, 0.08)  # Menu button area
-            
-            ocr_result = OCRResult(
-                text=text,
-                confidence=confidence,
-                normalized_bbox=bbox,
-                numeric_value=None
-            )
-            results.append(ocr_result)
-            
-            print(f"   📝 Pattern detected: '{text}' at ({bbox[0]:.2f}, {bbox[1]:.2f})")
-        
-        return results
+        raise RuntimeError(
+            "OCR_EXTRACTION_FAILED: All OCR methods failed to extract text. "
+            "Cannot proceed without real text detection. "
+            "Check OCR dependencies (tesseract, ocrmac, etc.) or screenshot quality."
+        )
     
     def _crop_image_for_roi(self, image_path: str, 
                           roi: Tuple[float, float, float, float]) -> Optional[str]:

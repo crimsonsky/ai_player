@@ -198,17 +198,13 @@ class OCRIntegrationModule:
         elif self.primary_method == "tesseract":
             results = self._extract_with_tesseract(screenshot_path, roi, region_name, text_type)
         
-        # If primary method failed or returned low confidence, try fallback
+        # If primary method failed or returned low confidence, FAIL
         if not results or (results and max(r.confidence for r in results) < self.confidence_threshold):
-            print(f"   🔄 Using pattern matching fallback for {region_name}")
-            fallback_results = self._extract_with_pattern_matching(
-                screenshot_path, roi, expected_text, region_name, text_type
+            print(f"❌ OCR failed for {region_name} - no fallback allowed")
+            raise RuntimeError(
+                f"OCR_CONFIDENCE_TOO_LOW: OCR results for {region_name} below threshold "
+                f"({self.confidence_threshold}). Cannot use fallback patterns."
             )
-            
-            # Use fallback if it's better than primary results
-            if not results or (fallback_results and 
-                             max(r.confidence for r in fallback_results) > max(r.confidence for r in results)):
-                results = fallback_results
         
         return results
     
@@ -323,31 +319,14 @@ class OCRIntegrationModule:
     
     def _extract_with_pattern_matching(self, screenshot_path: str, roi: Tuple[float, float, float, float],
                                      expected_text: List[str], region_name: str, text_type: str) -> List[OCRResult]:
-        """Extract text using pattern matching fallback."""
-        results = []
+        """REMOVED: No pattern matching fallback - real OCR must work."""
         
-        print(f"   🔍 Using pattern matching for {region_name}")
+        print(f"❌ Pattern matching requested for {region_name} - NOT ALLOWED")
         
-        # Simulate text detection based on expected patterns
-        for i, text in enumerate(expected_text[:3]):  # Limit to first 3 expected items
-            confidence = 0.85 - (i * 0.05)  # Decreasing confidence for additional items
-            
-            # Extract numeric value if present
-            numeric_value = self._extract_numeric_value(text)
-            
-            result = OCRResult(
-                text=text,
-                confidence=confidence,
-                label=f"{region_name}_{text.lower().replace(' ', '_')}",
-                numeric_value=numeric_value,
-                roi=roi,
-                method="pattern_match"
-            )
-            
-            results.append(result)
-            print(f"      🎯 Pattern match: '{text}' conf={confidence:.2f}")
-        
-        return results
+        raise RuntimeError(
+            f"PATTERN_MATCHING_FALLBACK_DISABLED: Cannot use fake pattern matching for {region_name}. "
+            "All text must be extracted using real OCR methods."
+        )
     
     def _crop_image_for_ocr(self, screenshot_path: str, roi: Tuple[float, float, float, float], 
                           region_name: str) -> Optional[str]:

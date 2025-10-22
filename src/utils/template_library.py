@@ -158,10 +158,12 @@ class TemplateLibrary:
     
     def detect_elements_fallback(self, screenshot_path: str) -> List[TemplateMatch]:
         """
-        Fallback element detection using built-in tools.
-        This version doesn't require OpenCV installation.
+        REMOVED: No fallback element detection - proper detection methods must work.
         """
-        matches = []
+        raise RuntimeError(
+            "TEMPLATE_DETECTION_FAILED: Cannot use fallback element detection. "
+            "Install OpenCV and ensure template matching works properly."
+        )
         
         try:
             # Get image dimensions

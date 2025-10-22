@@ -217,9 +217,13 @@ This project is developed for research and educational purposes.
    source venv/bin/activate
    ```
 
-3. **Test M1 milestone (Game Launch):**
+3. **Test milestones:**
    ```bash
+   # M1 - Game Launch
    python test_m1.py
+   
+   # M2 - Clean Perception System (Real Detection Only)
+   python test_m2_clean.py
    ```
 
 ## 📋 Development Milestones
