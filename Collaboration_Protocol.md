@@ -1,14 +1,14 @@
-# Collaboration and Roles Protocol (AIP-COLLAB-V1.1)
+# COLLABORATION AND ROLES PROTOCOL (AIP-COLLAB-V1.2)
 
 This protocol formalizes the roles, responsibilities, and mandatory communication flow across the project team: the Human Operator (Master), the Strategic Advisor (Consultant Architect), and the Automated Implementer (Agent A).
 
 ## 1. DEFINED ROLES AND RESPONSIBILITIES
 
-| Role | Responsibility | Communication Mandate |
-|------|---------------|----------------------|
-| **Master (Human Operator)** | Project Owner & Local Context Provider. Defines high-level goals and manually executes system-level debugging/fixes (e.g., macOS permissions). | Communicates with the Consultant Architect to initiate commands or report unresolvable physical/permission issues. |
-| **Consultant Architect (Advisor)** | Strategic Planning & Governance. Translates Master's goals and Agent A's technical reports into clear, low-level AGENT COMMANDS. Does not assume local project state or dependencies. | Provides instructions exclusively via a formal AGENT COMMAND prompt, strictly referencing versioned project documentation. |
-| **Agent A (The Implementer)** | Code Execution, Testing, and Artifact Management. Strictly adheres to all commands, writes and commits code, executes self-validation tests, and maintains DVC/Git integrity (Rule 2B/2C). | Must report status or blockages only when a command is fully executed or a system-level error (R1, R2, R3) prevents execution. |
+| Role | Responsibility | Communication Mandate | Audio Signal Mandate (New) |
+|------|---------------|----------------------|----------------------------|
+| **Master (Human Operator)** | Project Owner & Local Context Provider. Defines high-level goals and manually executes system-level debugging/fixes (e.g., macOS permissions). | Communicates with the Consultant Architect to initiate commands or report unresolvable physical/permission issues. | Listens for audio alerts to execute Manual Intervention Protocols (e.g., granting permissions, re-labeling data). |
+| **Consultant Architect (Advisor)** | Strategic Planning & Governance. Translates Master's goals and Agent A's technical reports into clear, low-level AGENT COMMANDS. Does not assume local project state or dependencies. | Provides instructions exclusively via a formal AGENT COMMAND prompt, strictly referencing versioned project documentation. | Monitors system for trigger events requiring $\text{Master}$ intervention or architectural guidance. |
+| **Agent A (The Implementer)** | Code Execution, Testing, and Artifact Management. Strictly adheres to all commands, writes and commits code, executes self-validation tests, and maintains DVC/Git integrity (Rule 2B/2C). | Must report status or blockages only when a command is fully executed or a system-level error (R1, R2, R3) prevents execution. | MANDATORY: Generates distinct audio alerts when triggering a Master Intervention Protocol (See $\text{Protocol 5}$). |
 
 ## 2. THE MANDATORY INTERACTION LOOP
 
@@ -38,7 +38,17 @@ When Agent A reports a physical or permission-related blocker (e.g., the recent 
 
 Any new agent (e.g., Agent B) must execute the Synchronization Protocol and the Git Pull/DVC Checkout mandate before reporting its status or commencing work. Their role must be defined by the Consultant Architect and documented here prior to deployment.
 
-## 5. GOVERNANCE COMPLIANCE
+## 5. MASTER INTERVENTION PROTOCOL: AUDIO SIGNALS (New)
+
+Agent A must use distinct, non-intrusive audio signals when a Master action is required. These signals must be logged to the console alongside the text failure message.
+
+| Triggering Event | Audio Signal | Mandatory Master Action |
+|------------------|--------------|-------------------------|
+| **Classification Drift (M6.2)** | "Data Labeling Needed" (Short, unique chime) | Manual launch and operation of the DLAT to label new elements. |
+| **Critical System Blocker (R1, R2, R3)** | "System Halt/Permission Required" (Distinct, sustained tone) | Manual debugging, system-level fixes (e.g., macOS permissions). |
+| **Training Completed (M5)** | "Model Update Ready" (Short, positive notification sound) | Review of training metrics (e.g., $\text{W\&B}$) and approval for model promotion. |
+
+## 6. GOVERNANCE COMPLIANCE
 
 This protocol operates under the AIP-GIT-V1.0 governance framework and requires:
 
@@ -46,9 +56,10 @@ This protocol operates under the AIP-GIT-V1.0 governance framework and requires:
 - Agent A must maintain Git/DVC integrity per established rules
 - Status reports must include technical details sufficient for architectural decision-making
 - Blocking issues must be escalated through the defined chain of command
+- **NEW**: Audio signal compliance for Master Intervention Protocols
 
 ---
 
-**Document Version**: AIP-COLLAB-V1.1  
-**Last Updated**: Agent A Implementation  
-**Governance**: Integrates with AIP-GIT-V1.0, Dependencies_And_Setup.md, and System Design Specification
+**Document Version**: AIP-COLLAB-V1.2  
+**Last Updated**: Master Protocol Enhancement - Audio Signals  
+**Governance**: Integrates with AIP-GIT-V1.0, Dependencies_And_Setup.md, System Design Specification, and Master Intervention Protocol
