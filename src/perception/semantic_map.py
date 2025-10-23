@@ -452,6 +452,71 @@ def validate_semantic_map_structure():
         return False
 
 
+# Agent B Integration Helper Functions
+def create_test_semantic_map() -> SemanticMap:
+    """
+    Create a test SemanticMap for Agent B's testing integration.
+    
+    Returns:
+        SemanticMap with realistic test data
+    """
+    # Create test detected elements
+    test_elements = [
+        DetectedElement(
+            label=ElementLabel.BUTTON,
+            semantic_value="Single Player",
+            bbox=[0.4, 0.3, 0.2, 0.08],  # Normalized [x, y, w, h]
+            confidence=0.95,
+            attributes={"button_type": "menu_navigation"}
+        ),
+        DetectedElement(
+            label=ElementLabel.TEXT,
+            semantic_value="DUNE LEGACY",
+            bbox=[0.35, 0.1, 0.3, 0.06],
+            confidence=0.98,
+            attributes={"text_type": "game_title"}
+        ),
+        DetectedElement(
+            label=ElementLabel.COUNTER,
+            semantic_value="Spice: 2847",
+            bbox=[0.02, 0.02, 0.15, 0.04],
+            confidence=0.87,
+            attributes={"resource_type": "spice", "value": 2847}
+        ),
+        DetectedElement(
+            label=ElementLabel.BUTTON,
+            semantic_value="Options",
+            bbox=[0.4, 0.5, 0.2, 0.08],
+            confidence=0.92,
+            attributes={"button_type": "menu_navigation"}
+        ),
+        DetectedElement(
+            label=ElementLabel.TEXT,
+            semantic_value="v0.96.4",
+            bbox=[0.45, 0.18, 0.1, 0.03],
+            confidence=0.78,
+            attributes={"text_type": "version_info"}
+        )
+    ]
+    
+    # Create test semantic map
+    semantic_map = SemanticMap(
+        timestamp=time.time(),
+        screen_context=ScreenContext.MAIN_MENU,
+        elements=test_elements,
+        screen_resolution=(1920, 1080),
+        capture_source="test_data",
+        processing_time_ms=45.2,
+        yolo_model_version="YOLOv8n",
+        metadata={
+            "test_purpose": "Agent B integration testing",
+            "creation_method": "create_test_semantic_map"
+        }
+    )
+    
+    return semantic_map
+
+
 if __name__ == "__main__":
     print("📋 Module 3D: Hierarchical Semantic Graph - AIP-SDS-V2.3")
     print("=" * 70)

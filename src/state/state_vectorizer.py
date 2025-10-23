@@ -534,6 +534,23 @@ def validate_state_vectorizer():
         return False
 
 
+def create_default_config() -> Dict[str, Any]:
+    """
+    Create default configuration for testing.
+    
+    Returns:
+        Default configuration dictionary
+    """
+    return {
+        'vector_size': 256,
+        'max_elements': 20,
+        'history_frames': 4,
+        'normalization_enabled': True,
+        'confidence_threshold': 0.1,
+        'element_padding': True
+    }
+
+
 def main():
     """Main function for testing state vectorizer."""
     print("📋 Module 4: State Representation Vectorizer - AIP-SDS-V2.3")

@@ -25,7 +25,7 @@ from dataclasses import dataclass, asdict
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from src.state.state_vectorizer import StateVectorizer, VectorConfiguration
+    from src.state.state_vectorizer import StateVectorizer, VectorConfiguration, create_default_config
     from src.perception.semantic_map import (
         SemanticMap, 
         DetectedElement,
