@@ -20,39 +20,39 @@ The AI Player project implements an autonomous agent capable of playing Dune Leg
 | Milestone | Status | Description |
 |-----------|--------|-------------|
 | M1 | ✅ **COMPLETE** | Game Launch POC - Automated Dune Legacy startup |
-| M2 | ✅ **COMPLETE** | Menu Reading - Template matching & OCR integration |
-| M3 | 🔄 **PENDING** | Menu Navigation - RL-driven menu interaction |
-| M4 | 📋 **PLANNED** | Action Execution - In-game command implementation |
-| M5 | 📋 **PLANNED** | Learning Integration - Training pipeline & optimization |
+| M2 | 🔄 **REFACTORED** | Input Emulation API - NEW pyobjc-based precise input control |
+| M3 | � **PLANNED** | Learning-Based Perception Engine - YOLOv8 AI vision model |
+| M4 | 📋 **PLANNED** | State Representation - Semantic map to vector conversion |
+| M5 | 📋 **PLANNED** | Decision & Learning - PPO RL training integration |
 
-## M2 Implementation Details
+## ARCHITECTURAL UPDATE: V2.3 - LEARNING-BASED SYSTEM
 
-**MILESTONE 2 SPECIFICATION: ✅ FULLY COMPLIANT**
+**⚠️ LEVEL-6 ARCHITECTURAL PURGE COMPLETED**
 
-The M2 Menu Reading system includes four complete modules:
+The project has undergone a major architectural refactoring from rule-based vision (OCR/Template Matching) to learning-based AI perception systems per AIP-SDS-V2.3.
 
-### Module 2A: Perception Module (`src/perception/perception_module.py`)
-- Screen capture using pyobjc with macOS integration
-- Image preprocessing with OpenCV
-- Integration hub for template matching and OCR
+### NEW M2: Input Emulation API (`src/action/input_api.py`)
+- **Precise Input Control**: pyobjc CoreGraphics-based mouse and keyboard emulation
+- **Human-like Movement**: Non-linear interpolation for realistic cursor movement  
+- **Comprehensive Actions**: left_click(), right_click(), drag_select(), key_press(), move_mouse()
+- **High Precision**: Pixel-perfect, non-blocking input execution
+- **Validated & Tested**: Complete test suite with permission validation
 
-### Module 2B: Template Library (`src/utils/template_library.py`)
-- Professional template management with JSON persistence
-- Default templates for Dune Legacy UI elements
-- Confidence threshold ≥0.95 enforcement
-- ROI-based fallback detection
+### NEW M3: Learning-Based Perception Engine (PLANNED)
+- **YOLOv8 Object Detection**: AI vision model for Buttons, Resources, Units, Stats
+- **Graphics Text Recognition**: Custom-trained YOLO layers for game text interpretation
+- **Real-time Processing**: 30+ FPS with PyTorch MPS acceleration
+- **Dynamic Classification**: Automatic new element detection and labeling
+- **Semantic Mapping**: Hierarchical game state representation
 
-### Module 2C: Element Location (`src/perception/element_location.py`)
-- OpenCV-based template matching with cv2.matchTemplate
-- Normalized coordinate output (0.0-1.0 range)
-- Multiple fallback methods for robustness
-- Comprehensive error handling
+### DEPRECATED (PURGED)
+- ❌ Rule-based template matching system
+- ❌ OCR-based text extraction methods  
+- ❌ Apple Vision Framework integration
+- ❌ Signal Fusion Engine architecture
+- ❌ Manual template libraries and ROI detection
 
-### Module 2D: OCR Integration (`src/perception/ocr_integration.py`)
-- Apple Vision Framework via ocrmac (primary method)
-- Tesseract OCR integration (secondary fallback)
-- Pattern matching (ultimate fallback)
-- Numerical value extraction capabilities
+**Rationale**: Rule-based vision systems failed to handle graphics-rendered game text and dynamic UI elements. The new learning-based approach provides robust, scalable perception capabilities.
 
 ## Quick Start
 
@@ -85,17 +85,21 @@ dvc pull  # Download template library and training data
 
 ### Testing M1 (Game Launch)
 ```bash
-python -c "
-from src.action.action_module import ActionModule
-config = {'audio_feedback': True, 'game_name': 'Dune Legacy'}
-action_module = ActionModule(config)
-action_module.launch_game()
-"
+python m1_game_launch.py
 ```
 
-### Testing M2 (Menu Reading)
+### Testing M2 (Input Emulation API)
 ```bash
-python tests/test_m2_integration.py
+python tests/test_input_emulation.py
+```
+
+### Architecture Validation
+```bash
+# Check system design compliance
+cat "AI PLAYER SYSTEM DESIGN SPECIFICATION.md"
+
+# Review session progress  
+cat "SESSION_SUMMARY_2025-10-23.md"
 ```
 
 ## Project Structure
@@ -103,21 +107,20 @@ python tests/test_m2_integration.py
 ```
 ai_player/
 ├── .git/                    # Git repository
-├── .dvc/                    # DVC configuration  
 ├── src/                     # Source code modules
-│   ├── action/             # M1 - Game launch & input simulation
-│   ├── perception/         # M2 - Screen capture, templates, OCR
-│   ├── decision/           # M3 - RL decision making (future)
-│   ├── state/              # M4 - Game state representation (future)
+│   ├── action/             # M2 - Input Emulation API (NEW)
+│   ├── perception/         # M3 - Learning-Based Vision Engine (PLANNED)
+│   ├── decision/           # M5 - RL decision making (PLANNED)
+│   ├── state/              # M4 - State representation (PLANNED)
 │   └── utils/              # Shared utilities
 ├── tests/                   # Comprehensive test suites
-├── tools/                   # Development tools
-├── data/                    # DVC-tracked data artifacts
-│   ├── templates/          # UI element templates
-│   ├── training/           # Training datasets
-│   └── models/             # Trained model checkpoints
-├── docs/                    # Project documentation
-└── config/                  # Configuration files
+├── data/                    # Training datasets and model artifacts
+│   ├── yolo_dataset/       # YOLO training data (PLANNED)
+│   ├── models/             # Trained model checkpoints
+│   └── screenshots/        # Screenshot archive
+├── config/                  # Configuration files
+├── tools/                   # Development and annotation tools
+└── docs/                    # Project documentation
 ```
 
 ## Development Workflow
@@ -145,16 +148,17 @@ COMPLIANCE: AIP-GIT-V1.0-COMPLIANT
 
 ### Core Dependencies
 - **PyTorch** (MPS backend for Apple Silicon acceleration)
+- **YOLOv8** (Ultralytics - Real-time object detection)
 - **Stable Baselines3** (PPO reinforcement learning)
-- **OpenCV** (Computer vision and template matching)
-- **pyobjc** (macOS integration for screen capture)
-- **ocrmac** (Apple Vision Framework OCR)
+- **pyobjc** (macOS CoreGraphics for input emulation and screen capture)
+- **OpenCV** (Image preprocessing and computer vision utilities)
 
 ### Performance Requirements
-- Template matching: ≥0.95 confidence threshold
-- OCR text extraction: ≥0.8 confidence threshold
-- Coordinate normalization: 0.0-1.0 range for all outputs
-- Response time: <100ms for perception pipeline
+- Input emulation: Pixel-perfect precision with <10ms latency
+- Object detection: 30+ FPS real-time processing
+- YOLO inference: ≥0.8 confidence threshold for game elements
+- PyTorch MPS: GPU acceleration for vision model inference
+- Response time: <100ms for complete perception-action pipeline
 
 ### Safety Protocols
 - Guaranteed cleanup: Always returns to VS Code after testing
@@ -164,20 +168,24 @@ COMPLIANCE: AIP-GIT-V1.0-COMPLIANT
 
 ## Testing & Validation
 
-### M2 Self-Tests
+### Input Emulation Validation
 ```bash
-python tests/m2_self_tests.py
+python tests/test_input_emulation.py
 ```
 Validates:
-- ✅ Completeness: All components implemented
-- ✅ Robustness: Error handling under adverse conditions  
-- ✅ Stability: Consistent performance and recalibration
+- ✅ Precise mouse control with CoreGraphics
+- ✅ Keyboard input reliability
+- ✅ Drag selection functionality
+- ✅ Human-like movement interpolation
 
-### Integration Testing
+### System Architecture Tests
 ```bash
-python tests/test_m2_integration.py
+# Validate LEVEL-6 architectural purge completion
+python -c "import os; print('✅ Purge Complete' if not os.path.exists('src/perception/perception_module.py') else '❌ Purge Incomplete')"
+
+# Validate NEW M2 implementation
+python -c "from src.action.input_api import InputAPI; print('✅ NEW M2 Ready')"
 ```
-Validates full M2 pipeline with realistic scenarios.
 
 ## Documentation
 
@@ -201,9 +209,10 @@ This project is developed for research and educational purposes.
 
 ---
 
-**Current Status**: M2 Complete, M3 Development Ready  
-**Last Updated**: October 22, 2025  
-**Governance**: AIP-GIT-V1.0 Compliant
+**Current Status**: LEVEL-6 Architectural Purge Complete, NEW M2 Input API Implementation  
+**Architecture Version**: AIP-SDS-V2.3 - Learning-Based Perception Engine  
+**Last Updated**: October 23, 2025  
+**Governance**: AIP-GIT-V1.0 Compliant | AIP-COLLAB-V1.2 Audio Signal Mandate
 
 ### Setup
 1. **Clone and setup environment:**
